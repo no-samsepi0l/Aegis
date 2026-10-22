@@ -9,35 +9,27 @@ from concurrent.futures import ThreadPoolExecutor
 from colorama import Fore, Style, init
 from tqdm import tqdm
 
-#warnings.filterwarnings("ignore", category=UserWarning, module="requests")
+warnings.filterwarnings("ignore", category=UserWarning, module="requests")
 init(autoreset=True)
 
 
+# Parse command-line arguments.
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Aegis - High-Performance Web Enumeration Tool")
     parser.add_argument("-m", "--mode", choices=["dir", "sub"], default="dir",
-                        help="scan mode: 'dir' for directory fuzzing or 'sub' for subdomain enumeration (default: dir)")
-    parser.add_argument("-u", "--url", required=True, help="Full URL or Domain of the target (e.g., http://example.com/)")
+                        help="Scan mode: 'dir' for directory fuzzing or 'sub' for subdomain enumeration (default: dir)")
+    parser.add_argument("-u", "--url", required=True, help="Full URL or domain of the target (e.g., http://example.com/)")
     parser.add_argument("-w", "--wordlist", required=True, help="Path to the wordlist file")
     parser.add_argument("-t", "--timeout", type=float, default=1.5, help="Timeout in seconds (default: 1.5)")
-    parser.add_argument("-T", "--threads", type=int, default=20, help="Number of threads (default: 20)")
+    parser.add_argument("-T", "--threads", type=int, default=20, help="Number of concurrent threads (default: 20)")
     parser.add_argument("-mc", "--match-codes", type=str, default="200,301,302,308,403", 
-                        help="HTTP status codes to show (default: 200,301,302,308,403)")
+                        help="HTTP status codes to display (default: 200,301,302,308,403)")
     parser.add_argument("-x", "--extensions", type=str, default="", 
                         help="File extensions to append (e.g., php,html,txt)")
-
-    # AI Options
-    parser.add_argument("--ai", action="store_true", help="Enable AI analysis of suspicious findings after scan")
-    parser.add_argument("--api-key", type=str, 
-                        default=os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("NVIDIA_API_KEY"), 
-                        help="API key for AI provider")
-    parser.add_argument("--api-url", type=str, default="https://integrate.api.nvidia.com/v1/chat/completions",
-                        help="API endpoint URL")
-    parser.add_argument("--model", type=str, default="moonshotai/kimi-k2.6",
-                        help="AI model name")
     return parser.parse_args()
 
 
+# Display the application banner.
 def print_banner():
     print(Fore.GREEN + "Starting Aegis....")
     print("=" * 35)
@@ -56,18 +48,17 @@ def print_banner():
  ▒   ▒▒ ░ ░ ░  ░  ░   ░  ▒ ░░ ░▒  ░ ░
  ░   ▒      ░   ░ ░   ░  ▒ ░░  ░  ░  
  ░  ░   ░  ░      ░  ░        ░
- 
- made by: @no-samsepi0l""")
+ """)
     print(Fore.GREEN + "[=" + "=" * 35 + "=]")  
 
 
+# Check if a specific URL path exists and matches expected status codes.
 def check_path(session, url, path, timeout, match_codes, results):
     target_url = f"{url}{path}"
     try:
         response = session.head(target_url, timeout=timeout, allow_redirects=False)
 
         if response.status_code == 405:
-            
             response.close()
             response = session.get(target_url, timeout=timeout, allow_redirects=False, stream=True)
 
@@ -89,12 +80,12 @@ def check_path(session, url, path, timeout, match_codes, results):
             tqdm.write(formatted_res)
             results.append(formatted_res)
 
-        
         response.close()
     except requests.RequestException:
         pass
 
 
+# Resolve DNS A records for a given subdomain.
 def check_subdomain_dns(domain, sub, timeout, resolver, results):
     target_fqdn = f"{sub}.{domain}"
 
@@ -110,102 +101,8 @@ def check_subdomain_dns(domain, sub, timeout, resolver, results):
         pass
 
 
-def analyze_findings_ai(results, target, api_key, api_url, model):
-    if not api_key:
-        print(Fore.RED + "\n[-] AI Error: No API key provided.")
-        return
-
-    #You can add interesting_keywords but if you do, make sure to change interesting_findings to filter based on those keywords.    
-    interesting_findings = results[:15]
-
-    findings_text = "\n".join(interesting_findings)
-
-    prompt = f"""
-You are a senior cybersecurity expert and penetration testing consultant.
-Below are key findings from a web enumeration scan against target '{target}':
-
-{findings_text}
-
-Provide a concise, high-impact security analysis:
-1. **Critical Resources Discovered** (e.g., exposed secrets, admin interface exposures, sensitive backups, .git leaks).
-2. **Priority Attack Vectors** to investigate first based on these findings.
-3. **Recommended Exploitation & Enumeration Tools** (mention modern tools like GitTools, Nuclei, ffuf, SQLmap, Nmap, etc.).
-4. **Concrete Remediation & Hardening Steps** for the system administrator.
-
-Keep your tone professional, direct, structured, and strictly technical.(but give your response under 60 seconds)
-"""
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/aegis-scanner",
-        "X-Title": "Aegis Scanner"
-    }
-
-    candidate_models = [
-        model,
-        "deepseek-ai/deepseek-v4.1-flash",
-        "google/gemma-2b",
-        "deepseek-ai/deepseek-v4-flash-0731",#this list needs to be updated with the latest models available on the NVIDIA API or OpenRouter API and must be available with your plan.
-        "meta/llama-3.2-11b-vision-instruct"
-    ]
-
-    candidate_models = list(dict.fromkeys(candidate_models))
-
-    for current_model in candidate_models:
-        print(Fore.MAGENTA + f"\n[*] Trying AI analysis with model: {current_model}...")
-        payload = {
-            "model": current_model,
-            "messages": [
-                {"role": "system", "content": "You are a world-class cybersecurity expert and penetration testing assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.3
-        }
-
-        try:
-            response = requests.post(api_url, json=payload, headers=headers, timeout=60)
-            if response.status_code == 200:
-                ai_response = response.json()["choices"][0]["message"]["content"]
-                print(Fore.MAGENTA + "\n" + "=" * 55)
-                print(Fore.MAGENTA + Style.BRIGHT + "🤖 AI ANALYSIS & RECOMMENDATIONS")
-                print(Fore.MAGENTA + "=" * 55)
-                print(Fore.WHITE + ai_response)
-                print(Fore.MAGENTA + "=" * 55)
-                return
-            else:
-                print(Fore.YELLOW + f"[!] Model '{current_model}' failed (Status {response.status_code}). Trying fallback...")
-        except Exception as e:
-            print(Fore.YELLOW + f"[!] Request error with '{current_model}': {e}")
-
-    print(Fore.RED + "\n[-] All NVIDIA candidate models failed. Switched to OpenRouter API automatically...")
-
-    try:
-        openrouter_headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        openrouter_payload = {
-            "model": "meta-llama/llama-3.3-70b-instruct:free",
-            "messages": [
-                {"role": "system", "content": "You are a world-class cybersecurity expert."},
-                {"role": "user", "content": prompt}
-            ]
-        }
-        res = requests.post("https://openrouter.ai/api/v1/chat/completions", json=openrouter_payload, headers=openrouter_headers, timeout=30.0)
-        if res.status_code == 200:
-            print(Fore.MAGENTA + "\n" + "=" * 55)
-            print(Fore.MAGENTA + Style.BRIGHT + "🤖 AI ANALYSIS & RECOMMENDATIONS (OpenRouter)")
-            print(Fore.MAGENTA + "=" * 55)
-            print(Fore.WHITE + res.json()["choices"][0]["message"]["content"])
-            print(Fore.MAGENTA + "=" * 55)
-        else:
-            print(Fore.RED + "[-] Final fallback failed. Check your API Key or Network.")
-    except Exception as ex:
-        print(Fore.RED + f"[-] Final fallback error: {ex}")
-
-
-def web_enumeration(mode, target_input, wordlist_path, timeout, threads, match_codes_str, extensions_str, ai_enabled, api_key, api_url, model):
+# Run the multithreaded enumeration workflow.
+def web_enumeration(mode, target_input, wordlist_path, timeout, threads, match_codes_str, extensions_str):
     domain = ""
     url = ""
 
@@ -247,8 +144,6 @@ def web_enumeration(mode, target_input, wordlist_path, timeout, threads, match_c
     print(Fore.CYAN + f"[*] Match-codes: {sorted(list(valid_code))}")
     if mode == "dir":
         print(Fore.CYAN + f"[*] Extensions: {extensions if extensions else 'None'}")
-    if ai_enabled:
-        print(Fore.MAGENTA + f"[*] AI Analysis: ENABLED")
     print("=" * 50)
     print(f"STARTING THE SCAN WITH: {url if mode == 'dir' else domain}")
     print("=" * 50)
@@ -279,10 +174,7 @@ def web_enumeration(mode, target_input, wordlist_path, timeout, threads, match_c
     results = []
     start_time = time.time()
 
-    
     executor = ThreadPoolExecutor(max_workers=threads)
-
-    
 
     try:
         with tqdm(total=total_tasks, desc="[+] Scanning", unit="req", ascii=" #") as pbar:
@@ -299,13 +191,8 @@ def web_enumeration(mode, target_input, wordlist_path, timeout, threads, match_c
             for f in futures:
                 f.result()
 
-        
         executor.shutdown(wait=False)
         elapsed_time = round(time.time() - start_time, 2)
-
-        if ai_enabled and results:
-            analyze_findings_ai(results, domain if mode == "sub" else url, api_key, api_url, model)
-
         return results, elapsed_time
 
     except KeyboardInterrupt:
@@ -315,11 +202,10 @@ def web_enumeration(mode, target_input, wordlist_path, timeout, threads, match_c
         print(Fore.GREEN + " Terminated!")
         print(Fore.GREEN + "[===========]")
         print(Fore.RED + "\n[!] Process interrupted by user (Ctrl+C). Exiting...")
-        
-        
         os._exit(0)
 
 
+# Print scan results summary and elapsed time.
 def finish(results, elapsed_time):
     print(Fore.GREEN + "\n" + "[" + "-" * 50 + "]")
     print(Fore.GREEN + "\n[===========]")
@@ -343,8 +229,7 @@ if __name__ == "__main__":
 
     res = web_enumeration(
         args.mode, args.url, args.wordlist, args.timeout, 
-        args.threads, args.match_codes, args.extensions, 
-        args.ai, args.api_key, args.api_url, args.model
+        args.threads, args.match_codes, args.extensions
     )
     if res and res[0] is not None:
         results, elapsed_time = res
