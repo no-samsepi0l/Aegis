@@ -48,7 +48,7 @@ def print_banner():
  ▒   ▒▒ ░ ░ ░  ░  ░   ░  ▒ ░░ ░▒  ░ ░
  ░   ▒      ░   ░ ░   ░  ▒ ░░  ░  ░  
  ░  ░   ░  ░      ░  ░        ░
- """)
+ \n~by @no-samsepi0l""")
     print(Fore.GREEN + "[=" + "=" * 35 + "=]")  
 
 
