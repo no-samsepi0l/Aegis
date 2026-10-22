@@ -40,8 +40,6 @@
 
 ```
 
----
-
 ## 📦 Installation
 
 ### Prerequisites
