@@ -38,16 +38,8 @@
 
 ---
 
-```
 
 ## 📦 Installation
-
-### Prerequisites
-- Python **3.8+**
-- `git`
-- `pip`
-
-### Quick Start
 
 ```bash
 # Clone the repository
@@ -99,19 +91,19 @@ usage: aegis.py [-h] [-m {dir,sub}] -u URL -w WORDLIST [-t TIMEOUT] [-T THREADS]
 ### 1. Standard Web Discovery
 Scan standard routes using a standard directory wordlist:
 ```bash
-python aegis.py -u [https://example.com/](https://example.com/) -w /usr/share/seclists/Discovery/Web-Content/common.txt    # normal path in Kali
+python aegis.py -u https://example.com -w /usr/share/seclists/Discovery/Web-Content/common.txt    # normal path in Kali
 ```
 
 ### 2. High-Speed API & Hidden File Enumeration
 Scan with 60 threads, shorter timeout, and automatic extension appending:
 ```bash
-python aegis.py -u [https://example.com/](https://example.com/) -w wordlists/endpoints.txt -T 60 -t 1.0 -x json,env,bak,php
+python aegis.py -u https://example.com -w wordlists/endpoints.txt -T 60 -t 1.0 -x json,env,bak,php
 ```
 
 ### 3. Strict Status Code Isolation
 Only display valid responses (`200 OK`) and access-controlled endpoints (`403 Forbidden`):
 ```bash
-python aegis.py -u [https://example.com/](https://example.com/) -w wordlists/raft-medium-directories.txt -mc 200,403
+python aegis.py -u https://example.com -w wordlists/raft-medium-directories.txt -mc 200,403
 ```
 
 ### 4. Fast Subdomain Resolution
