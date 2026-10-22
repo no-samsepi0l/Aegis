@@ -1,4 +1,4 @@
-# Aegis 🛡️
+# Aegis 
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" />
@@ -29,7 +29,7 @@
 
 ---
 
-## ⚡ Key Features
+##  Key Features
 
 - **Dual Discovery**: fast HTTP endpoint fuzzing (`dir`) and high-speed DNS A-record brute-forcing (`sub`).
 - **Low-Overhead HTTP Fuzzing**: Automatically probes targets with lightweight HTTP `HEAD` requests to minimize payload transfer, transparently degrading to streamed `GET` requests only when encountering `405 Method Not Allowed`.
@@ -39,7 +39,7 @@
 ---
 
 
-## 📦 Installation
+##  Installation
 
 ```bash
 # Clone the repository
@@ -66,7 +66,7 @@ sudo ln -s $(pwd)/aegis.py /usr/local/bin/aegis
 
 ---
 
-## 🛠️ Command-Line Reference
+##  Command-Line Reference
 
 ```text
 usage: aegis.py [-h] [-m {dir,sub}] -u URL -w WORDLIST [-t TIMEOUT] [-T THREADS]
@@ -86,7 +86,7 @@ usage: aegis.py [-h] [-m {dir,sub}] -u URL -w WORDLIST [-t TIMEOUT] [-T THREADS]
 
 ---
 
-## 🚀 Practical Examples
+##  Practical Examples
 
 ### 1. Standard Web Discovery
 Scan standard routes using a standard directory wordlist:
@@ -114,7 +114,7 @@ python aegis.py -m sub -u example.com -w /usr/share/seclists/Discovery/DNS/subdo
 
 ---
 
-## 🖥️ Terminal Output Preview
+##  Terminal Output Preview
 
 ```text
 Starting Aegis....
@@ -153,7 +153,7 @@ STARTING THE SCAN WITH: [https://target.local/](https://target.local/)
 
 ---
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [ ] **Structured Output**: Export results directly to JSON, CSV, or formatted Markdown reports (`-o / --output`).
 - [ ] **Proxy Integration**: Full upstream HTTP/HTTPS and SOCKS5 proxy routing (`--proxy`).
